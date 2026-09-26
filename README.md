@@ -45,11 +45,8 @@ Based on the data structure, this is a three-sided marketplace business connecti
 Additional finding: Delivery_person_ID follows the pattern [CityCode]RES[number]DEL[number] — indicating this ID is a system-generated code combination, not a persistent individual courier identity (supported by the finding that 1,288 of 1,320 "couriers" are recorded as operating across more than one city category, which makes no sense for real couriers). Geographic coverage reaches 21+ Indian cities (Mumbai, Bangalore, Chennai, Kolkata, Pune, and others), far broader than implied by the City column, which contains only 3 categories (Metropolitian/Urban/Semi-Urban).
 
 ### Dataset Overview
-Number of rows	45,584
-Number of columns	20
-Data period	11 Feb – 6 Apr 2022 (~2 months)
-Geographic coverage	21+ cities in India
-Target variable	Time_taken (min) — total time from order placed to delivered to customer
+
+<center><img src="Asset/3. Data Understanding.png"></img></center>
 
 ### Signs the Dataset Is Synthetic
 ●	Type_of_order is split almost perfectly evenly (Snack 25.3% / Meal 25.1% / Drinks 24.8% / Buffet 24.7%) — unusual for organic order data.
@@ -59,14 +56,9 @@ Target variable	Time_taken (min) — total time from order placed to delivered t
 ●	There is not a single financial column (price, delivery fee, commission) — the dataset is purely operational/logistical.
 
 ## 4. Data Preprocessing
-Data Quality Issues Found
-Issue	Row Count	Resolution
-Negative-signed restaurant coordinates	431	Fixed with abs()
-Restaurant coordinates (0,0) — invalid	3,640 (8%)	Set to missing
-Courier rating > 5.0 (out of scale)	53	Set to missing, then median-imputed
-Courier age < 18 years	38	Kept, flagged transparently
-Mixed time format (Excel decimal)	4,068	Re-parsed into a consistent time format
-Missing values (Age, Ratings, Weather, Traffic, City, multiple_deliveries)	8 columns, 0.5%–4.2%	Median / mode / "Unknown" imputation
+### Data Quality Issues Found
+
+<center><img src="Asset/4. Data Preprocessing.png"></img></center>
 
 ### Derived Features (Feature Engineering)
 ●	Distance_km — straight-line (haversine) distance from restaurant to delivery location. Mean 9.72 km, range 1.47–20.97 km.
@@ -85,53 +77,31 @@ Missing values (Age, Ratings, Weather, Traffic, City, multiple_deliveries)	8 col
 ## 5. Exploratory Data Analysis
 ### 5.1 Factor Ranking by Influence
 Categorical factors are measured by the range between the fastest and slowest category's average delivery time:
-Factor	Range (minutes)
-Festival	19.53
-Traffic (density)	9.88
-Weather	6.99
-Vehicle Type	3.12
-Order Type	0.22
+
+<center><img src="Asset/5. EDA1.png"></img></center>
 
 Numerically (correlation with Time_taken), ranked by strength:
-Factor	Correlation
-multiple_deliveries	+0.376
-Delivery_person_Ratings	−0.332
-Distance_km	+0.320
-Delivery_person_Age	+0.290
-Vehicle_condition	−0.233
-Order_Hour	+0.184
+
+<center><img src="Asset/5. EDA2.png"></img></center>
+
 multiple_deliveries is the strongest numerical factor and the only one fully within the company's control through order-allocation policy.
 
 ### 5.2 Trade-off Point: Multiple Deliveries per Courier
-Additional Orders	Avg. Delivery Time (minutes)	Increase
-0	23.00	—
-1	26.76	+3.76
-2	40.45	+13.69
-3	47.82	+7.37
+
+<center><img src="Asset/5. EDA3.png"></img></center>
+
 From 0→1 additional order, the time cost is small (+3.76 min) — still reasonable for efficiency. But once a courier reaches 2 additional orders, delivery time jumps +13.69 minutes at once — far larger than the increase before or after it. The clear trade-off point: 1 additional order (2 orders total per trip) is the safe limit; beyond that, courier "savings" start to sacrifice delivery speed significantly.
 
 ### 5.3 External Factors: Traffic and Weather
-Traffic Condition	Average (minutes)
-Jam (gridlock)	31.23
-High	27.31
-Medium	26.75
-Unknown	26.62
-Low	21.35
 
-Weather Condition	Average (minutes)
-Cloudy	28.96
-Fog	28.94
-Unknown	26.62
-Windy	26.20
-Stormy	25.95
-Sandstorms	25.94
-Sunny	21.97
+<center><img src="Asset/5. EDA4.png"></img></center>
+
 Traffic Jam adds ~10 minutes compared to Low. Cloudy and Fog weather are slowest (~29 min) — notable because they are slower than Stormy/Sandstorms, likely because low visibility slows couriers down more than the extreme weather itself. Both factors have a real effect but sit outside the company's direct control — their value lies in more realistic ETA estimation, not prevention.
 
 ### 5.4 Festival: A Critical Moment
-Condition	Avg. Delivery Time (minutes)
-Regular day (No)	25.98
-During Festival (Yes)	45.52
+
+<center><img src="Asset/5. EDA5.png"></img></center>
+
 A gap of 19.54 minutes — nearly double. This effect holds consistently across all traffic levels (42–47 minutes across every traffic category during festivals), suggesting the main cause is a surge in order volume that overwhelms kitchen and courier capacity simultaneously — not just heavier traffic. The implication: the festival solution lies in capacity readiness (backup couriers), not route optimization.
 
 ## 6. Insight & Interpretation
@@ -148,16 +118,14 @@ Higher rating correlates with faster delivery (−0.332); older age correlates w
 
 ## 7. Interactive Dashboard
 The dashboard was built in Power BI as a single page, following the storytelling flow: overview (KPIs) → factor ranking → controllable factor (multiple deliveries) → external factors (traffic, weather) → order composition. It includes slicers for date range, city type, and festival status.
- 
+
+<center><img src="Asset/Dashboard.png"></img></center>
+
 Four KPI cards display the average delivery time (26.37 min), total orders (45K), the percentage of late orders above 35 minutes (17.65%), and the average delivery time during festivals (45.52 min) — all consistent with the EDA results in the previous section.
 
 ## 8. Business Insight Recommendations
-Recommendation	Impact	Effort	Owner
-1	Cap additional orders at 1 per courier under normal conditions	High	Low	Operations / Product
-2	Prepare backup couriers & extra incentives 1-2 days before festivals	High	Medium	Operations / Marketing
-3	Build dynamic ETA estimation based on real-time traffic & weather	Medium	Medium–High	Product / Data Engineering
-4	Investigate vehicle-assignment patterns before changing fleet policy	Medium	Low	Data Analyst
-5	Hold off on HR policy (hiring/incentives) based on courier rating or age	Low	Low	People Analytics / HR
+
+<center><img src="Asset/8. BIR.png"></img></center>
 
 Important note: because this dataset has no cost/revenue data, the impact levels above are qualitative (High/Medium/Low, based on statistical strength and ease of execution), not financial estimates. Calculating financial impact (e.g., estimated cost savings) requires additional data not currently available in this dataset.
 
